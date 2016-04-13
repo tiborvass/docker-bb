@@ -43,6 +43,9 @@ func checkout(temp, repo, sha string) error {
 
 // build the docker image
 func build(temp, name string) error {
+	if out, err := exec.Command(strings.Fields(`sed -ri 's/^(ENV GO_VERSION) 1.5.4/\1 1.5.3/' Dockerfile`)).CombinedOutput(); err != nil {
+		return fmt.Errorf("Could not change Go version in Dockerfile for %s: %s", name, out)
+	}
 	cmd := exec.Command("docker", "build", "-t", name, ".")
 	cmd.Dir = temp
 
@@ -57,7 +60,7 @@ func build(temp, name string) error {
 func makeBinary(temp, image, name string, duration time.Duration) error {
 	var (
 		c   = make(chan error)
-		cmd = exec.Command("docker", "run", "-i", "--privileged", "--name", name, "-v", path.Join(temp, "bundles")+":/go/src/github.com/docker/docker/bundles", image, "hack/make.sh", "binary", "cross", "tgz")
+		cmd = exec.Command("docker", "run", "-i", "--privileged", "-e", "DOCKER_CROSSPLATFORMS=windows/amd64", "--name", name, "-v", path.Join(temp, "bundles")+":/go/src/github.com/docker/docker/bundles", image, "hack/make.sh", "cross")
 	)
 	cmd.Dir = temp
 
